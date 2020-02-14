@@ -10,6 +10,7 @@ import {
   TreeNodeDatum,
 } from '../types/common';
 import './style.css';
+import { Transition } from 'react-transition-group';
 
 type NodeEventHandler = (id: string, evt: SyntheticEvent) => void;
 
@@ -34,6 +35,7 @@ type NodeProps = {
 };
 
 type NodeState = {
+  in: boolean;
   transform: string;
   initialStyle: { opacity: number };
 };
@@ -45,7 +47,37 @@ export default class Node extends React.Component<NodeProps, NodeState> {
 
   private nodeRef: SVGGElement = null;
 
+  private transitionStyles = {
+    entering: {
+      transform: this.setTransform(this.props.position, this.props.parent, this.props.orientation),
+      opacity: 1,
+    },
+    entered: {
+      transform: this.setTransform(this.props.position, this.props.parent, this.props.orientation),
+      opacity: 1,
+    },
+    exiting: {
+      transform: this.setTransform(
+        this.props.position,
+        this.props.parent,
+        this.props.orientation,
+        true
+      ),
+      opacity: 0,
+    },
+    exited: {
+      transform: this.setTransform(
+        this.props.position,
+        this.props.parent,
+        this.props.orientation,
+        true
+      ),
+      opacity: 0,
+    },
+  };
+
   state = {
+    in: false,
     transform: this.setTransform(
       this.props.position,
       this.props.parent,
@@ -58,11 +90,12 @@ export default class Node extends React.Component<NodeProps, NodeState> {
   };
 
   componentDidMount() {
-    this.commitTransform();
+    this.setState({ in: true });
+    // this.commitTransform();
   }
 
   componentDidUpdate() {
-    this.commitTransform();
+    // this.commitTransform();
   }
 
   shouldComponentUpdate(nextProps: NodeProps) {
@@ -94,31 +127,31 @@ export default class Node extends React.Component<NodeProps, NodeState> {
       : `translate(${position.x},${position.y})`;
   }
 
-  applyTransform(
-    transform: string,
-    transitionDuration: NodeProps['transitionDuration'],
-    opacity = 1,
-    done = () => {}
-  ) {
-    if (transitionDuration === 0) {
-      select(this.nodeRef)
-        .attr('transform', transform)
-        .style('opacity', opacity);
-      done();
-    } else {
-      select(this.nodeRef)
-        .transition()
-        .duration(transitionDuration)
-        .attr('transform', transform)
-        .style('opacity', opacity)
-        .on('end', done);
-    }
-  }
+  // applyTransform(
+  //   transform: string,
+  //   transitionDuration: NodeProps['transitionDuration'],
+  //   opacity = 1,
+  //   done = () => {}
+  // ) {
+  //   if (transitionDuration === 0) {
+  //     select(this.nodeRef)
+  //       .attr('transform', transform)
+  //       .style('opacity', opacity);
+  //     done();
+  //   } else {
+  //     select(this.nodeRef)
+  //       .transition()
+  //       .duration(transitionDuration)
+  //       .attr('transform', transform)
+  //       .style('opacity', opacity)
+  //       .on('end', done);
+  //   }
+  // }
 
   commitTransform() {
     const { orientation, transitionDuration, position, parent } = this.props;
     const transform = this.setTransform(position, parent, orientation);
-    this.applyTransform(transform, transitionDuration);
+    // this.applyTransform(transform, transitionDuration);
   }
 
   renderNodeElement = () => {
@@ -151,30 +184,51 @@ export default class Node extends React.Component<NodeProps, NodeState> {
     this.props.onMouseOut(this.props.data.id, evt);
   };
 
-  componentWillLeave(done) {
-    const { orientation, transitionDuration, position, parent } = this.props;
-    const transform = this.setTransform(position, parent, orientation, true);
-    this.applyTransform(transform, transitionDuration, 0, done);
+  componentWillUnmount() {
+    /* 
+              const { orientation, transitionDuration, position, parent } = this.props;
+          const transform = this.setTransform(position, parent, orientation, true);
+          this.applyTransform(transform, transitionDuration, 0);
+    */
   }
 
   render() {
-    const { data } = this.props;
+    const { data, transitionDuration } = this.props;
     return (
-      <g
-        id={data.id}
-        ref={n => {
-          this.nodeRef = n;
+      <Transition
+        in={this.state.in}
+        timeout={transitionDuration}
+        onEnter={() => {
+          console.log('ON ENTER');
         }}
-        style={this.state.initialStyle}
-        className={data._children ? 'nodeBase' : 'leafNodeBase'}
-        transform={this.state.transform}
-        onClick={this.handleOnClick}
-        onMouseOver={this.handleOnMouseOver}
-        onMouseOut={this.handleOnMouseOut}
+        onExit={() => {
+          console.log('ON EXIT CB');
+        }}
       >
-        {this.renderNodeElement()}
-        {this.renderNodeLabelElement()}
-      </g>
+        {transitionState => {
+          console.log('transitionState:', transitionState, data.name);
+          return (
+            <g
+              id={data.id}
+              ref={n => {
+                this.nodeRef = n;
+              }}
+              style={{
+                // ...this.state.initialStyle,
+                opacity: this.transitionStyles[transitionState].opacity,
+              }}
+              className={data._children ? 'nodeBase' : 'leafNodeBase'}
+              transform={this.transitionStyles[transitionState].transform}
+              onClick={this.handleOnClick}
+              onMouseOver={this.handleOnMouseOver}
+              onMouseOut={this.handleOnMouseOut}
+            >
+              {this.renderNodeElement()}
+              {this.renderNodeLabelElement()}
+            </g>
+          );
+        }}
+      </Transition>
     );
   }
 }

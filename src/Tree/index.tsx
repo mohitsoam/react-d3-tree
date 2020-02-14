@@ -281,7 +281,7 @@ class Tree extends React.Component<TreeProps, TreeState> {
    *
    * @return {void}
    */
-  static collapseNode(node: FIXME) {
+  static collapseNode(node: TreeNodeDatum) {
     node._collapsed = true;
     if (node._children && node._children.length > 0) {
       node._children.forEach(child => {
@@ -298,7 +298,7 @@ class Tree extends React.Component<TreeProps, TreeState> {
    *
    * @return {void}
    */
-  static expandNode(node: FIXME) {
+  static expandNode(node: TreeNodeDatum) {
     node._collapsed = false;
   }
 
@@ -311,7 +311,6 @@ class Tree extends React.Component<TreeProps, TreeState> {
    * @return {void}
    */
   collapseNeighborNodes(targetNode: TreeNodeDatum, nodeSet: TreeNodeDatum[]) {
-    // FIXME: depth prop isn't available on TreeNodeDatum -> undefined behaviour here
     const neighbors = this.findNodesAtDepth(targetNode._depth, nodeSet, []).filter(
       node => node.id !== targetNode.id
     );
@@ -339,9 +338,11 @@ class Tree extends React.Component<TreeProps, TreeState> {
     evt.persist();
     if (this.props.collapsible && !this.state.isTransitioning) {
       if (targetNode._collapsed) {
+        console.log('EXPANDING NODE');
         Tree.expandNode(targetNode);
         this.props.shouldCollapseNeighborNodes && this.collapseNeighborNodes(targetNode, data);
       } else {
+        console.log('COLLAPSING NODE');
         Tree.collapseNode(targetNode);
       }
       // Lock node toggling while transition takes place
@@ -366,7 +367,7 @@ class Tree extends React.Component<TreeProps, TreeState> {
    *
    * @return {void}
    */
-  handleOnClickCb = (targetNode: FIXME, evt: SyntheticEvent) => {
+  handleOnClickCb = (targetNode: TreeNodeDatum, evt: SyntheticEvent) => {
     const { onClick } = this.props;
     if (onClick && typeof onClick === 'function') {
       onClick(clone(targetNode), evt);
@@ -570,6 +571,8 @@ class Tree extends React.Component<TreeProps, TreeState> {
       depthFactor,
       initialDepth,
     };
+
+    console.log('RENDER*******************');
 
     return (
       <div className={`rd3t-tree-container ${zoomable ? 'rd3t-grabbable' : undefined}`}>
